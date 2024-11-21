@@ -14,11 +14,11 @@ culori = [
 ]
 
 # Citirea gridului
-df = pd.read_csv('grid_culori.csv')
-grid_culori = df.to_numpy
+df = pd.read_csv('grid_culori.csv', header=None)
+grid_culori = df.to_numpy()
 
 # Generarea secvenței de culori observate
-observatii = ######
+observatii = ['red', 'red', 'lime', 'yellow', 'blue']
 
 # Mapare culori -> indecși
 culoare_to_idx = {culoare: idx for idx, culoare in enumerate(culori)}
@@ -35,23 +35,35 @@ idx_to_stare = {idx: stare for stare, idx in stare_to_idx.items()}
 
 # Matrice de tranziție
 transitions = np.zeros((numar_stari, numar_stari))
+
 for i, j in stari_ascunse:
     vecini = [
         (i - 1, j), (i + 1, j), (i, j - 1), (i, j + 1)  # sus, jos, stânga, dreapta
     ]
     vecini_valizi = [stare_to_idx[(x, y)] for x, y in vecini if 0 <= x < 10 and 0 <= y < 10]
-    ######
+    transitions[stare_to_idx[(i, j)], stare_to_idx[(i, j)]] = 0.25 # subpunctul 1.
+    # transitions[stare_to_idx[(i, j)], stare_to_idx[(i, j)]] = 0.0 # subpunctul 2.
+    for vecin in vecini_valizi: 
+        transitions[stare_to_idx[(i, j)], vecin] = 0.75 / len(vecini_valizi) # subpunctul 1.
+        # transitions[stare_to_idx[(i, j)], vecin] = 1 / len(vecini_valizi) # subpunctul 2.
 
 # Matrice de emisie
 emissions = np.zeros((numar_stari, len(culori)))
-######
-  
-# Modelul HMM
+for i in range(dimensiune_grid[0]):
+    for j in range(dimensiune_grid[1]):
+        stare_idx = stare_to_idx[(i, j)]
+        culoare = grid_culori[i, j]
+        culoare_idx = culoare_to_idx[culoare]
+        emissions[stare_idx, culoare_idx] = 1.0
 
-######
+model = hmm.CategoricalHMM(n_components=numar_stari)
+model.startprob_ = np.ones(numar_stari) / numar_stari
+model.transmat_ = transitions
+model.emissionprob_ = emissions
 
 # Rulăm algoritmul Viterbi pentru secvența de observații
-######
+logprob, secventa_stari = model.decode(np.array(observatii_idx).reshape(-1, 1), algorithm="viterbi")
+print(f'Prob acestui drum: {np.exp(logprob)}')
 
 # Convertim secvența de stări în poziții din grid
 drum = [idx_to_stare[idx] for idx in secventa_stari]
